@@ -1,9 +1,10 @@
 ORM.java
 ========
 
-is a lightweight and easy-to-use ORM library for all JDBC-compatible Databases.
+is a lightweight and easy-to-use ORM library for all JDBC-compatible Databases.  
 It is intended to be used for Programs with mostly simple queries for
-readability and extendability. No more lists of hundreds of `PreparedStatement`!
+readability and extendability. No more lists of hundreds of `PreparedStatement`s!  
+Simply have your Classes `extend ORM.Model`, then `.save()` them and later `.find(id)` them!
 
 Why?
 ----
@@ -41,7 +42,8 @@ public class ORMTest {
         long id = p.save();
 
         /* Retrieve Nadine from the database */
-        Potato p2 = Model.find(id, Potato.class).first();
+        PotatoModel potatoModel = new Model<Potato>(Potato.class);
+        Potato p2 = potatoModel.find(id);
         System.out.println(p2.name); // "Nadine"
         System.out.println(p2.getVariety()); // "Agata"
 
@@ -52,7 +54,8 @@ public class ORMTest {
         long id = p.save();
 
         /* Retrieve Nadina from the database */
-        SweetPotato p2 = Model.find(id, SweetPotato.class).first();
+        SweetPotatoModel sweetPotatoModel = new Model<SweetPotato>(SweetPotato.class);
+        SweetPotato p2 = sweetPotatoModel.find(id);
         System.out.println(p2.name); // "Nadina"
         System.out.println(p2.getVariety()); // "Bienville"
     }
