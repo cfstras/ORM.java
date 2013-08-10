@@ -59,7 +59,37 @@ public class BaseTest {
         private String name;
         public String color;
         public int age;
-        
+
+        @Override
+        public int hashCode() {
+            int hash = 7;
+            hash = 73 * hash + (this.name != null ? this.name.hashCode() : 0);
+            hash = 73 * hash + (this.color != null ? this.color.hashCode() : 0);
+            hash = 73 * hash + this.age;
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final Potato other = (Potato) obj;
+            if ((this.name == null) ? (other.name != null) : !this.name.equals(other.name)) {
+                return false;
+            }
+            if ((this.color == null) ? (other.color != null) : !this.color.equals(other.color)) {
+                return false;
+            }
+            if (this.age != other.age) {
+                return false;
+            }
+            return true;
+        }
+
         public void setName(String name) {
             this.name = name;
         }
@@ -67,5 +97,27 @@ public class BaseTest {
     
     class SweetPotato extends Potato {
         public float sweetness;
+
+        @Override
+        public int hashCode() {
+            int hash = 7;
+            hash = 37 * hash + Float.floatToIntBits(this.sweetness);
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final SweetPotato other = (SweetPotato) obj;
+            if (Float.floatToIntBits(this.sweetness) != Float.floatToIntBits(other.sweetness)) {
+                return false;
+            }
+            return true;
+        }
     }
 }

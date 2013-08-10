@@ -19,8 +19,10 @@ import java.util.Map.Entry;
  */
 public class ORM {
     
-    private static HashMap<Class, ArrayList<Field>> classes = 
+    private static HashMap<Class, ArrayList<Field>> fields =
             new HashMap<Class, ArrayList<Field>>();
+    private static HashMap<Class, PreparedStatement[]> queries =
+            new HashMap<Class, PreparedStatement[]>();
     
     private static Connection conn;
     private static Map<String, Class<?>> typeMap;
@@ -115,15 +117,14 @@ public class ORM {
                 throw new ORMRuntimeException("Can't create a Model without an "
                         + "existing database connection");
             }
-            ArrayList<Field> nfields = classes.get(clazz);
+            ArrayList<Field> nfields = ORM.fields.get(clazz);
             // check if this class was analyzed yet
             if(nfields == null) {
                 nfields = getFields(clazz);
-                classes.put(clazz, nfields);
+                ORM.fields.put(clazz, nfields);
                 try {
                     // also check whether we already have a table for this class
                     createTable(clazz, nfields);
-                    //TODO also cache the statements
                     prepareStatements(clazz, nfields);
                 } catch (SQLException ex) {
                     throw new ORMRuntimeException("Error while creating table",ex);
@@ -169,7 +170,7 @@ public class ORM {
                 if (st != null) try { st.close(); } catch (SQLException ignore) {}
             }
         }
-        
+
         public void prepareStatements(Class<?> clazz, ArrayList<Field> fields)
                 throws SQLException {
             // inserting a new object
@@ -183,7 +184,6 @@ public class ORM {
                 if(i>1) q.append(", ");
             }
             q.append(");");
-            System.out.println(q.toString());
             PreparedStatement stmt = conn.prepareStatement(q.toString(), Statement.RETURN_GENERATED_KEYS);
             queries[Queries.INSERT.ordinal()] = stmt;
             
@@ -191,9 +191,10 @@ public class ORM {
             q.setLength(0);
             q.append("SELECT * FROM \"").append(sqlFriendly(clazz.getSimpleName()))
                     .append("\" WHERE id = ?;");
-            System.out.println(q.toString());
-            stmt = conn.prepareStatement(q.toString(), Statement.RETURN_GENERATED_KEYS);
+            stmt = conn.prepareStatement(q.toString());
             queries[Queries.FIND.ordinal()] = stmt;
+
+            ORM.queries.put(clazz, queries);
         }
         
         public T find(long id) {
@@ -241,7 +242,6 @@ public class ORM {
                 "id SERIAL PRIMARY KEY,\n");
         appendSQLFields(fields, q, true);
         q.append(");");
-        System.out.println("SQL: "+q.toString());
         stmt.execute(q.toString());
     }
     
@@ -282,15 +282,27 @@ public class ORM {
     
     public static class Query<T extends Model> {
         
+        private final ArrayList<Field> fields;
         private final Class clazz;
-        
+        private final PreparedStatement[] queries;
+
         public Query(Class clazz) {
             this.clazz = clazz;
+            this.fields = ORM.fields.get(clazz);
+            this.queries = ORM.queries.get(clazz);
+            //TODO nullpointer-check
         }
         
         public T find(long id) {
-            //TODO
-            return null;
+            try {
+                PreparedStatement stmt = queries[Queries.FIND.ordinal()];
+                stmt.setLong(1, id);
+                ResultSet rs = stmt.executeQuery();
+                rs.next();
+                return construct(rs);
+            } catch (SQLException ex) {
+                throw new ORMRuntimeException("Error finding " + clazz + ": " + ex.getMessage(), ex);
+            }
         }
         
         public T first() {
@@ -312,6 +324,31 @@ public class ORM {
         public ArrayList<T> all() {
             //TODO
             return null;
+        }
+
+        /**
+         * Constructs an Object from the current ResultSet row.
+         *
+         * @param rs a ResultSet sitting on a row with contents valid for this
+         * class
+         * @return a fresh Object
+         */
+        @SuppressWarnings("unchecked")
+        private T construct(ResultSet rs) {
+            try {
+                Object o = clazz.newInstance();
+                for (Field f : fields) {
+                    Object fo = rs.getObject(sqlFriendly(f.getName()));
+                    f.set(o, fo);
+                }
+                return (T) o;
+            } catch (InstantiationException ex) {
+                throw new ORMRuntimeException("Error instantiating " + clazz, ex);
+            } catch (IllegalAccessException ex) {
+                throw new ORMRuntimeException("Error instantiating " + clazz, ex);
+            } catch (SQLException ex) {
+                throw new ORMRuntimeException("Error instantiating " + clazz, ex);
+            }
         }
     }
     
