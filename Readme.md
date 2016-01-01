@@ -15,8 +15,7 @@ to serialize your objects? *Search no more.*
 Status
 ------
 
-As of now, ORM.java is **not yet** implemented. Stay tuned for updates.  
-Implementation is going on in my private time, so don't rush me.
+Implemented are basic save() and find() methods. This library is more to be seen as a concept of how one could implement an ORM using basic reflection in Java. I do not recommend it as a production library, but it can be a good learning experience.  
 However, you are welcome to help by submitting issues or pull requests.
 
 How?
